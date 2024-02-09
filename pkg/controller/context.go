@@ -278,6 +278,7 @@ func (c *ControllerContext) CheckForARecords() error {
 		ips, err := util.ResolveHost(host)
 		if err != nil {
 			// unable to resolve host, continue
+			fmt.Printf("unable to resolve %s: %v\n", host, err)
 			continue
 		}
 		for _, ip := range ips {
