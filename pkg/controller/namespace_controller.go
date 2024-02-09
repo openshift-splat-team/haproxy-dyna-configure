@@ -113,7 +113,7 @@ func StartManager() {
 	}
 
 	// Define the interval
-	interval := 5 * time.Second
+	interval := 30 * time.Second
 
 	// Create a new ticker
 	ticker := time.NewTicker(interval)
