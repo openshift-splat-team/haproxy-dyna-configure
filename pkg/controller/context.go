@@ -56,7 +56,7 @@ func (c *ControllerContext) Initialize(config *data.MonitorConfig, client client
 
 func (c *ControllerContext) Update(pod *corev1.Pod) error {
 	ns := pod.Namespace
-	if !strings.HasPrefix(ns, "ci-op-") {
+	if !strings.HasPrefix(ns, "ci-op-") && !strings.HasPrefix(ns, "ci-ln-") {
 		return nil
 	}
 	var jobHash string
