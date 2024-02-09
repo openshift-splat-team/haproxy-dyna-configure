@@ -30,7 +30,7 @@ jobs:
       uses: redhat-actions/buildah-build@v2
       id: build-image
       with:
-        image: jira-bot
+        image: haproxy-dyna-configure
         tags: ${{ github.branch }} ${{ github.sha }}
         containerfiles: |
           ./Dockerfile
