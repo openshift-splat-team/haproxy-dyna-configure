@@ -129,8 +129,11 @@ func (c *ControllerContext) reconcileTargets() *data.MonitorConfig {
 }
 
 func (c *ControllerContext) hasConfigUpdated(monitorConfig *data.MonitorConfig) bool {
-	if c.lastMonitorConfig == nil {
+	defer func() {
 		c.lastMonitorConfig = monitorConfig
+	}()
+
+	if c.lastMonitorConfig == nil {
 		return true
 	}
 
@@ -143,17 +146,17 @@ func (c *ControllerContext) hasConfigUpdated(monitorConfig *data.MonitorConfig) 
 	for _, monitorRange := range c.lastMonitorConfig.MonitorRanges {
 		prevMonitorRangeMap[monitorRange.BaseDomain] = monitorRange
 		if _, exists := monitorRangeMap[monitorRange.BaseDomain]; !exists {
+			fmt.Printf("mismatch: base domain %s does not exist", monitorRange.BaseDomain)
 			return true
 		}
 	}
 
 	for _, monitorRange := range monitorConfig.MonitorRanges {
 		if _, exists := prevMonitorRangeMap[monitorRange.BaseDomain]; !exists {
+			fmt.Printf("mismatch: base domain %s does not exist", monitorRange.BaseDomain)
 			return true
 		}
 	}
-
-	c.lastMonitorConfig = monitorConfig
 
 	return false
 }
