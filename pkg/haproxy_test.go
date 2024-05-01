@@ -41,35 +41,6 @@ frontend frontend-1
   tcp-request inspect-delay 5000
   use_backend backend-1 if { req.ssl_sni -m end .example.com }
 `
-
-	goodDynamicConfig = `
-frontend dyna-frontend-6443
-  mode tcp
-  bind 0.0.0.0:16443 name dyna-frontend-6443
-  tcp-request content accept if { req_ssl_hello_type 1 }
-  tcp-request inspect-delay 5000
-
-backend test-domain-6443
-  mode tcp
-  server 192.168.1.4-6443 192.168.1.4:6443 check verify none
-  server 192.168.1.5-6443 192.168.1.5:6443 check verify none
-  server 192.168.1.6-6443 192.168.1.6:6443 check verify none
-
-frontend dyna-frontend-443
-  mode tcp
-  bind 0.0.0.0:10443 name dyna-frontend-443
-  tcp-request content accept if { req_ssl_hello_type 1 }
-  tcp-request inspect-delay 5000
-
-backend test-domain-443
-  mode tcp
-  server 192.168.1.4-443 192.168.1.4:443 check verify none
-  server 192.168.1.5-443 192.168.1.5:443 check verify none
-  server 192.168.1.6-443 192.168.1.6:443 check verify none
-`
-
-	goodTargetConfigHash = "eDgsbJsPF5632OgjBPw8iIOXWF93Lb6S5C4ICh8tBaKZ5KYcw3SdLX0DL3tp2EwCFjbOm-RZltUHk4trqflMRQ=="
-	goodTargetConfig     = "test-header\n" + goodDynamicConfig
 )
 
 var (
@@ -83,21 +54,6 @@ var (
 		Port:       443,
 		Targets:    targets,
 		PathPrefix: "*.apps",
-	}
-
-	goodMonitorConfig = &data.MonitorConfigSpec{
-		MonitorConfig: data.MonitorConfig{
-			HaproxyHeader: "test-header\n",
-			MonitorRanges: []data.MonitorRange{
-				{
-					MonitorPorts: []data.MonitorPort{
-						apiPort,
-						appsPort,
-					},
-					BaseDomain: "test-domain",
-				},
-			},
-		},
 	}
 )
 

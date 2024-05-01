@@ -3,10 +3,10 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/go-logr/logr"
 	"github.com/openshift-splat-team/haproxy-dyna-configure/data"
 	"github.com/openshift-splat-team/haproxy-dyna-configure/pkg"
@@ -54,15 +54,16 @@ func (c *ControllerContext) Initialize(config *data.MonitorConfig, client client
 	c.client = client
 }
 
-func (c *ControllerContext) Update(pod *corev1.Pod) error {
+func (c *ControllerContext) Update(pod *corev1.Pod) {
 	ns := pod.Namespace
 	if !strings.HasPrefix(ns, "ci-ln-") {
-		return nil
+		return
 	}
 	var jobHash string
 	jobHash, err := getEnvFromPod(pod, "JOB_NAME_HASH")
 	if err != nil {
-		return fmt.Errorf("no job hash is associated with this pod: %v", err)
+		log.Printf("no job hash is associated with this pod: %v", err)
+		return
 	}
 
 	targetsMutex.Lock()
@@ -81,7 +82,6 @@ func (c *ControllerContext) Update(pod *corev1.Pod) error {
 		}
 	}
 	c.namespaceTargets[ns] = namespaceTarget
-	return nil
 }
 
 func (c *ControllerContext) getBaseDomain(ns, jobHash string) string {
@@ -161,11 +161,12 @@ func (c *ControllerContext) hasConfigUpdated(monitorConfig *data.MonitorConfig) 
 	return false
 }
 
-func (c *ControllerContext) Reconcile() error {
+func (c *ControllerContext) Reconcile() {
 	logrus.Infof("reconciling HAProxy configuration")
 	ctx := context.TODO()
 	if err := c.CheckForARecords(); err != nil {
-		return fmt.Errorf("error while checking A records: %v", err)
+		log.Printf("error while checking A records: %v", err)
+		return
 	}
 
 	targetsMutex.Lock()
@@ -174,14 +175,15 @@ func (c *ControllerContext) Reconcile() error {
 	monitorConfig := c.reconcileTargets()
 
 	if !c.hasConfigUpdated(monitorConfig) {
-		return nil
+		return
 	}
 
 	logrus.Infof("configuration has updated, building new haproxy configuration")
 
 	content, hash, err := pkg.BuildTargetHAProxyConfig(monitorConfig)
 	if err != nil {
-		return fmt.Errorf("unable to build HAProxy config: %v", err)
+		log.Printf("unable to build HAProxy config: %v", err)
+		return
 	}
 
 	cm := corev1.ConfigMap{}
@@ -212,20 +214,20 @@ func (c *ControllerContext) Reconcile() error {
 	if create {
 		if err = c.client.Create(ctx, &cm); err != nil {
 			c.log.V(4).Info("creating haproxy configmap")
-			return fmt.Errorf("unable to create config map: %v", err)
+			log.Printf("unable to create config map: %v", err)
+			return
 		}
 	} else {
 		if err = c.client.Update(ctx, &cm); err != nil {
-			c.log.V(4).Info("updating haproxy configmap")
-			spew.Dump("updating haproxy configmap")
-			return fmt.Errorf("unable to update config map: %v", err)
+			log.Printf("error updating haproxy configmap: %v", err)
+			return
 		}
 	}
 
-	return c.bumpHaproxyDeployment(ctx, hash)
+	c.bumpHaproxyDeployment(ctx, hash)
 }
 
-func (c *ControllerContext) bumpHaproxyDeployment(ctx context.Context, hash string) error {
+func (c *ControllerContext) bumpHaproxyDeployment(ctx context.Context, hash string) {
 	deploymentName := types.NamespacedName{
 		Namespace: c.namespace,
 		Name:      "clusterbot-haproxy",
@@ -241,7 +243,8 @@ func (c *ControllerContext) bumpHaproxyDeployment(ctx context.Context, hash stri
 	if create {
 		logrus.Infof("creating haproxy configmap")
 		if err := c.client.Create(ctx, &deployment); err != nil {
-			return fmt.Errorf("unable to create config map: %v", err)
+			log.Printf("unable to create config map: %v", err)
+			return
 		}
 	} else {
 		logrus.Infof("updating haproxy configmap")
@@ -250,10 +253,10 @@ func (c *ControllerContext) bumpHaproxyDeployment(ctx context.Context, hash stri
 		}
 		deployment.Spec.Template.Annotations["config-hash"] = hash
 		if err := c.client.Update(ctx, &deployment); err != nil {
-			return fmt.Errorf("unable to update config map: %v", err)
+			log.Printf("unable to update config map: %v", err)
+			return
 		}
 	}
-	return nil
 }
 
 func (c *ControllerContext) CheckForARecords() error {
@@ -315,7 +318,7 @@ func (c *ControllerContext) CheckForARecords() error {
 	return nil
 }
 
-func (c *ControllerContext) Destroy(namespace string) error {
+func (c *ControllerContext) Destroy(namespace string) {
 	logrus.Infof("destroying namespace %s", namespace)
 	targetsMutex.Lock()
 	defer targetsMutex.Unlock()
@@ -323,5 +326,4 @@ func (c *ControllerContext) Destroy(namespace string) error {
 		logrus.Infof("deleting namespace %s", namespace)
 		delete(c.namespaceTargets, namespace)
 	}
-	return nil
 }

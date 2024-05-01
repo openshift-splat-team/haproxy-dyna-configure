@@ -162,8 +162,17 @@ func StartManager() {
 	}
 
 	client := mgr.GetClient()
-	corev1.AddToScheme(mgr.GetScheme())
-	appsv1.AddToScheme(mgr.GetScheme())
+	err = corev1.AddToScheme(mgr.GetScheme())
+	if err != nil {
+		setupLog.Error(err, "unable to add corev1 to scheme")
+		os.Exit(1)
+	}
+	err = appsv1.AddToScheme(mgr.GetScheme())
+	if err != nil {
+		setupLog.Error(err, "unable to add appsv1 to scheme")
+		os.Exit(1)
+	}
+
 	if err = (&NamespaceReconciler{
 		Client:  client,
 		Scheme:  mgr.GetScheme(),

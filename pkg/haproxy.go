@@ -3,7 +3,6 @@ package pkg
 import (
 	"bytes"
 	"fmt"
-	"strings"
 
 	"github.com/openshift-splat-team/haproxy-dyna-configure/data"
 	haproxy "github.com/openshift-splat-team/haproxy-dyna-configure/data/haproxy"
@@ -30,14 +29,7 @@ func createBackendSwitchingRule(baseDomain string, frontend *haproxy.Section, ba
 	logrus.Infof("creating backend switching rule %s", backend.Name)
 
 	var rule string
-	if len(port.PathPrefix) > 0 {
-		pathPrefix := port.PathPrefix
-		if strings.HasPrefix(pathPrefix, "*") {
-			pathPrefix = pathPrefix[1:]
-		}
-		rule = fmt.Sprintf("if { req.ssl_sni -m end .%s }", baseDomain)
-
-	} else if len(port.PathMatch) > 0 {
+	if len(port.PathMatch) > 0 || len(port.PathPrefix) > 0 {
 		rule = fmt.Sprintf("if { req.ssl_sni -m end .%s }", baseDomain)
 	}
 
