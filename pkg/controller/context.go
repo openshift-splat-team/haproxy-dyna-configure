@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/netip"
 	"strings"
 	"sync"
 
@@ -105,7 +106,7 @@ func (c *ControllerContext) reconcileTargets() *data.MonitorConfig {
 					data.MonitorPort{
 						Port:      6443,
 						PathMatch: "api.",
-						Targets:   []string{job.APIVIP},
+						Targets:   job.APIVIP,
 					})
 			}
 			if len(job.IngressVIP) > 0 {
@@ -113,7 +114,7 @@ func (c *ControllerContext) reconcileTargets() *data.MonitorConfig {
 					data.MonitorPort{
 						Port:       443,
 						PathPrefix: "*.apps.",
-						Targets:    []string{job.IngressVIP},
+						Targets:    job.IngressVIP,
 					})
 			}
 			if len(ports) == 0 {
@@ -267,12 +268,7 @@ func (c *ControllerContext) CheckForARecords() error {
 	for ns, namespaceTarget := range c.namespaceTargets {
 		for hashId, target := range namespaceTarget {
 			if len(target.APIVIP) == 0 {
-				url := fmt.Sprintf("api.%s-%s.%s", ns, hashId, c.config.BaseDomain)
-				hostsToCheck[url] = ""
-				targetHostCheckMap[url] = target
-			}
-			if len(target.IngressVIP) == 0 {
-				url := fmt.Sprintf("*.apps.%s-%s.%s", ns, hashId, c.config.BaseDomain)
+				url := fmt.Sprintf("api-int.%s-%s.%s", ns, hashId, c.config.BaseDomain)
 				hostsToCheck[url] = ""
 				targetHostCheckMap[url] = target
 			}
@@ -308,10 +304,17 @@ func (c *ControllerContext) CheckForARecords() error {
 		if target, exists = targetHostCheckMap[host]; !exists {
 			continue
 		}
-		if strings.HasPrefix(host, "api.") {
-			target.APIVIP = ip
+		target.APIVIP = []string{ip}
+		target.IngressVIP = []string{ip}
+
+		ip, err := netip.ParseAddr(ip) // Parse IP address
+		if err != nil {
+			fmt.Println("Invalid IP address")
 		} else {
-			target.IngressVIP = ip
+			fmt.Println("Original IP address:", ip.String())
+			newIp := ip.Next() // get the next address
+			fmt.Println("Incremented IP address:", newIp.String())
+			target.IngressVIP = append(target.IngressVIP, newIp.String())
 		}
 		c.namespaceTargets[target.Namespace][target.JobHash] = target
 	}

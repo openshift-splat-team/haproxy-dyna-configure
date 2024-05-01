@@ -106,8 +106,6 @@ github.com/netdata/go.d.plugin v0.52.0 h1:ywwcawKE9D/7Yzaayw0S1IW5gmRH6EcB1DIxYf
 github.com/netdata/go.d.plugin v0.52.0/go.mod h1:LMo//tMdfeF5C3nCuCs1ikRgdpORdhMZSSxq81y6bSM=
 github.com/onsi/ginkgo/v2 v2.9.5 h1:+6Hr4uxzP4XIUyAkg61dWBw8lb/gc4/X5luuxN/EC+Q=
 github.com/onsi/gomega v1.27.7 h1:fVih9JD6ogIiHUN6ePK7HJidyEDpWGVB5mzM7cWNXoU=
-github.com/openshift/api v0.0.0-20230609104832-ca79cab44f4a h1:zbhuD4h9Qjp2a3zLcDaPEnX/K3+8TQmXJDl+DLf23Rg=
-github.com/openshift/api v0.0.0-20230609104832-ca79cab44f4a/go.mod h1:4VWG+W22wrB4HfBL88P40DxLEpSOaiBVxUnfalfJo9k=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
