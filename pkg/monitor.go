@@ -23,7 +23,7 @@ var monitorConfig data.MonitorConfigSpec
 var mu sync.Mutex
 
 const (
-	defaultConfigPath   = "/home/rvanderp/code/haproxy-dyna-configure/monitor-config.yaml"
+	defaultConfigPath   = "monitor-config.yaml"
 	monitorConfigEnvVar = "MONITOR_CONFIG"
 )
 
