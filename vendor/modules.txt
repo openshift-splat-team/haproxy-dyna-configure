@@ -106,9 +106,6 @@ github.com/munnerz/goautoneg
 # github.com/netdata/go.d.plugin v0.52.0
 ## explicit; go 1.20
 github.com/netdata/go.d.plugin/pkg/iprange
-# github.com/openshift/api v0.0.0-20230609104832-ca79cab44f4a
-## explicit; go 1.20
-github.com/openshift/api/config/v1
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors

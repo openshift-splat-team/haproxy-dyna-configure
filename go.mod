@@ -4,10 +4,9 @@ go 1.19
 
 require (
 	github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883
-	github.com/davecgh/go-spew v1.1.1
+	github.com/go-logr/logr v1.2.4
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/netdata/go.d.plugin v0.52.0
-	github.com/openshift/api v0.0.0-20230609104832-ca79cab44f4a
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
 	k8s.io/api v0.27.2
@@ -20,10 +19,10 @@ require (
 	github.com/apparentlymart/go-cidr v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/zapr v1.2.4 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.1 // indirect
