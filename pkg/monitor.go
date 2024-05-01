@@ -14,8 +14,8 @@ import (
 
 	"github.com/go-yaml/yaml"
 	"github.com/netdata/go.d.plugin/pkg/iprange"
+	"github.com/openshift-splat-team/haproxy-dyna-configure/data"
 	"github.com/pkg/errors"
-	"github.com/rvanderp3/haproxy-dyna-configure/data"
 	"github.com/sirupsen/logrus"
 )
 
@@ -23,28 +23,43 @@ var monitorConfig data.MonitorConfigSpec
 var mu sync.Mutex
 
 const (
-	MonitorConfigurationFile = "monitor-config.yaml"
+	defaultConfigPath   = "/home/rvanderp/code/haproxy-dyna-configure/monitor-config.yaml"
+	monitorConfigEnvVar = "MONITOR_CONFIG"
 )
 
-func Initialize(ctx context.Context) error {
-	configRaw, err := os.ReadFile(MonitorConfigurationFile)
+func getConfigPath() string {
+	if val, exists := os.LookupEnv(monitorConfigEnvVar); exists {
+		return val
+	}
+	return defaultConfigPath
+}
+
+func GetConfig() (*data.MonitorConfig, error) {
+	var monitorConfig data.MonitorConfig
+	configRaw, err := os.ReadFile(getConfigPath())
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("unable to read monitor config: %v", err)
 	}
 	err = yaml.Unmarshal(configRaw, &monitorConfig)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("unable to unmarshall monitor config: %v", err)
 	}
+	return &monitorConfig, nil
+}
+
+func Initialize(ctx context.Context) error {
+
+	monitorConfig, err := GetConfig()
 	if err != nil {
-		return nil
+		return fmt.Errorf("unable to get config: %v", err)
 	}
 
-	if len(monitorConfig.MonitorConfig.SubnetsJson) > 0 {
-		nativeSubnetRanges, err := parseSubnetsJson(monitorConfig.MonitorConfig.SubnetsJson)
+	if len(monitorConfig.SubnetsJson) > 0 {
+		nativeSubnetRanges, err := parseSubnetsJson(monitorConfig.SubnetsJson)
 		if err != nil {
 			return errors.Wrap(err, "unable to parse native subnet json")
 		}
-		monitorConfig.MonitorConfig.MonitorRanges = append(monitorConfig.MonitorConfig.MonitorRanges, nativeSubnetRanges...)
+		monitorConfig.MonitorRanges = append(monitorConfig.MonitorRanges, nativeSubnetRanges...)
 	}
 	return nil
 }

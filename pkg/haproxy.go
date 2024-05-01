@@ -1,237 +1,126 @@
 package pkg
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
-	"github.com/haproxytech/client-native/configuration"
-	"github.com/haproxytech/models"
-	"github.com/rvanderp3/haproxy-dyna-configure/data"
+	"github.com/openshift-splat-team/haproxy-dyna-configure/data"
+	haproxy "github.com/openshift-splat-team/haproxy-dyna-configure/data/haproxy"
+	"github.com/openshift-splat-team/haproxy-dyna-configure/pkg/util"
 	"github.com/sirupsen/logrus"
 )
 
-func makeCleanModel(config *configuration.Client) error {
-	//config := client.Configuration
-	_, frontEnds, err := config.GetFrontends("")
-	if err != nil {
-		return fmt.Errorf("unable to get frontends: %w", err)
-	}
-
-	for _, frontEnd := range frontEnds {
-		version, err := config.GetVersion("")
-		if err != nil {
-			return fmt.Errorf("unable to get config version: %w", err)
-		}
-		if frontEnd.Name == "stats" {
-			continue
-		}
-		err = config.DeleteFrontend(frontEnd.Name, "", version)
-		if err != nil {
-			return fmt.Errorf("unable to delete frontend: %w", err)
-		}
-	}
-
-	_, backEnds, err := config.GetBackends("")
-	if err != nil {
-		return fmt.Errorf("unable to get backends: %w", err)
-	}
-	for _, backEnd := range backEnds {
-		version, err := config.GetVersion("")
-		if err != nil {
-			return fmt.Errorf("unable to get config version: %w", err)
-		}
-		err = config.DeleteBackend(backEnd.Name, "", version)
-		if err != nil {
-			return fmt.Errorf("unable to delete backend: %w", err)
-		}
-	}
-	return nil
-}
-
-func createFrontend(config *configuration.Client, name string, port *data.MonitorPort) error {
+func createFrontend(name string, port *data.MonitorPort) *haproxy.Section {
 	logrus.Infof("creating frontend %s", name)
 
-	version, err := config.GetVersion("")
-	if err != nil {
-		return fmt.Errorf("unable to get config version: %w", err)
-	}
-
-	fe := models.Frontend{
-		Mode: models.FrontendModeTCP,
+	return &haproxy.Section{
+		Type: haproxy.SectionFrontEnd,
 		Name: name,
+		Attributes: []string{
+			"mode tcp",
+			fmt.Sprintf("bind 0.0.0.0:%d", (10000 + port.Port)),
+			"tcp-request content accept if { req_ssl_hello_type 1 }",
+			"tcp-request inspect-delay 5000",
+		},
 	}
-
-	_, _, err = config.GetFrontend(name, "")
-	if err == nil {
-		logrus.Infof("frontend %s already exists.", name)
-		return nil
-	}
-
-	err = config.CreateFrontend(&fe, "", version)
-	if err != nil {
-		return fmt.Errorf("unable to create frontend: %w", err)
-	}
-
-	version++
-	id := int64(0)
-	timeout := int64(5000)
-	tcpRule1 := models.TCPRequestRule{
-		ID:      &id,
-		Type:    models.TCPRequestRuleTypeInspectDelay,
-		Timeout: &timeout,
-	}
-	err = config.CreateTCPRequestRule("frontend", name, &tcpRule1, "", version)
-	if err != nil {
-		return fmt.Errorf("unable to create TCP request rule 1: %w", err)
-	}
-
-	version++
-	tcpRule2 := models.TCPRequestRule{
-		Action:   models.TCPRequestRuleActionAccept,
-		Cond:     models.TCPRequestRuleCondIf,
-		ID:       &id,
-		CondTest: "{ req_ssl_hello_type 1 }",
-		Type:     models.TCPRequestRuleTypeContent,
-	}
-	err = config.CreateTCPRequestRule("frontend", name, &tcpRule2, "", version)
-	if err != nil {
-		return fmt.Errorf("unable to create TCP request rule 2: %w", err)
-	}
-
-	version++
-	containerPort := port.Port + 10000
-	bind := models.Bind{
-		Address: "0.0.0.0",
-		Port:    &containerPort,
-		Name:    name,
-	}
-	err = config.CreateBind(name, &bind, "", version)
-	if err != nil {
-		return fmt.Errorf("unable to create bind: %w", err)
-	}
-	return nil
 }
 
-func createBackendSwitchingRule(config *configuration.Client, baseDomain string, frontendName string, backendName string, port *data.MonitorPort) error {
-	logrus.Infof("creating backend switching rule %s", backendName)
+func createBackendSwitchingRule(baseDomain string, frontend *haproxy.Section, backend *haproxy.Section, port *data.MonitorPort) error {
+	logrus.Infof("creating backend switching rule %s", backend.Name)
 
-	version, err := config.GetVersion("")
-	if err != nil {
-		return err
-	}
-	id := int64(0)
-
-	var rule models.BackendSwitchingRule
-
+	var rule string
 	if len(port.PathPrefix) > 0 {
 		pathPrefix := port.PathPrefix
 		if strings.HasPrefix(pathPrefix, "*") {
 			pathPrefix = pathPrefix[1:]
 		}
-		rule = models.BackendSwitchingRule{
-			Cond:     "if",
-			ID:       &id,
-			Name:     backendName,
-			CondTest: fmt.Sprintf("{ req.ssl_sni -m end %s%s }", pathPrefix, baseDomain),
-		}
+		rule = fmt.Sprintf("if { req.ssl_sni -m end .%s }", baseDomain)
+
 	} else if len(port.PathMatch) > 0 {
-		rule = models.BackendSwitchingRule{
-			Cond:     "if",
-			ID:       &id,
-			Name:     backendName,
-			CondTest: fmt.Sprintf("{ req.ssl_sni -i %s%s }", port.PathMatch, baseDomain),
-		}
+		rule = fmt.Sprintf("if { req.ssl_sni -m end .%s }", baseDomain)
 	}
 
-	err = config.CreateBackendSwitchingRule(frontendName, &rule, "", version)
-	if err != nil {
-		return err
-	}
-
+	frontend.AppendAttribute(fmt.Sprintf("use_backend %s %s", backend.Name, rule))
 	return nil
 }
 
-func createBackend(config *configuration.Client, name string, port *data.MonitorPort) error {
+func createBackend(name string, port *data.MonitorPort) *haproxy.Section {
 	logrus.Infof("creating backend %s", name)
 
-	version, err := config.GetVersion("")
-	if err != nil {
-		return fmt.Errorf("unable to get config version: %w", err)
-	}
-	backend := &models.Backend{
-		Mode: models.BackendModeTCP,
+	backend := haproxy.Section{
+		Type: haproxy.SectionBackEnd,
 		Name: name,
-	}
-	err = config.CreateBackend(backend, "", version)
-	if err != nil {
-		return fmt.Errorf("unable to create backend: %w", err)
+		Attributes: []string{
+			"mode tcp",
+		},
 	}
 
 	for _, target := range port.Targets {
 		port := port.Port
-		server := &models.Server{
-			Address: target,
-			Port:    &port,
-			Name:    fmt.Sprintf("%s-%d", target, port),
-			Check:   models.ServerCheckEnabled,
-			Verify:  models.ServerVerifyNone,
-		}
-		version, err = config.GetVersion("")
-		if err != nil {
-			return fmt.Errorf("unable to get config version: %w", err)
-		}
-		err = config.CreateServer(name, server, "", version)
-		if err != nil {
-			return fmt.Errorf("unable to create server: %w", err)
-		}
+		serverName := fmt.Sprintf("%s-%d", target, port)
+		server := fmt.Sprintf("server %s %s:%d check verify none", serverName, target, port)
+		backend.AppendAttribute(server)
 	}
-	return nil
+	return &backend
 }
 
-func ApplyConfiguration(monitorConfig *data.MonitorConfigSpec) error {
+func BuildDynamicConfiguration(monitorConfig *data.MonitorConfig) (string, error) {
+	sections := []*haproxy.Section{}
 
-	clientParams := configuration.ClientParams{
-		ConfigurationFile:      configuration.DefaultConfigurationFile,
-		Haproxy:                configuration.DefaultHaproxy,
-		UseValidation:          configuration.DefaultUseValidation,
-		PersistentTransactions: false,
-		TransactionDir:         "/etc/haproxy/tx",
-		MasterWorker:           false,
-	}
+	frontEnds := map[string]*haproxy.Section{}
 
-	client := &configuration.Client{}
-	err := client.Init(clientParams)
+	var frontEnd *haproxy.Section
 
-	if err != nil {
-		return err
-	}
-
-	//client.
-	//client.
-	err = makeCleanModel(client)
-	if err != nil {
-		return err
-	}
-	for _, monitorRange := range monitorConfig.MonitorConfig.MonitorRanges {
+	for _, monitorRange := range monitorConfig.MonitorRanges {
 		for _, monitorPort := range monitorRange.MonitorPorts {
 			if len(monitorPort.Targets) == 0 || len(monitorRange.BaseDomain) == 0 {
 				continue
 			}
 			name := fmt.Sprintf("%s-%d", monitorRange.BaseDomain, monitorPort.Port)
-			frontendName := fmt.Sprintf("dyna-frontend-%d", monitorPort.Port)
-			err := createBackend(client, name, &monitorPort)
-			if err != nil {
-				return fmt.Errorf("unable to create backend: %w", err)
+			frontendName := fmt.Sprintf("dynaconfig-fe-%d", monitorPort.Port)
+
+			var exists bool
+
+			if frontEnd, exists = frontEnds[frontendName]; !exists {
+				frontEnd = createFrontend(frontendName, &monitorPort)
+				frontEnds[frontendName] = frontEnd
 			}
-			err = createFrontend(client, frontendName, &monitorPort)
+
+			backEnd := createBackend(name, &monitorPort)
+
+			err := createBackendSwitchingRule(monitorRange.BaseDomain, frontEnd, backEnd, &monitorPort)
 			if err != nil {
-				return fmt.Errorf("unable to create frontend: %w", err)
+				return "", fmt.Errorf("unable to create backend switching rules: %w", err)
 			}
-			err = createBackendSwitchingRule(client, monitorRange.BaseDomain, frontendName, name, &monitorPort)
-			if err != nil {
-				return fmt.Errorf("unable to create backend switching rules: %w", err)
-			}
+
+			sections = append(sections, backEnd)
 		}
 	}
-	return nil
+	for _, frontEnd := range frontEnds {
+		sections = append(sections, frontEnd)
+	}
+
+	buf := &bytes.Buffer{}
+	for _, section := range sections {
+		buf = section.Serialize(buf)
+	}
+
+	return buf.String(), nil
+}
+
+func BuildTargetHAProxyConfig(monitorConfig *data.MonitorConfig) (string, string, error) {
+	buffer := bytes.Buffer{}
+	buffer.WriteString(monitorConfig.HaproxyHeader)
+
+	dynamicConfig, err := BuildDynamicConfiguration(monitorConfig)
+	if err != nil {
+		return "", "", fmt.Errorf("unable to build the dynamic configuration: %v", err)
+	}
+
+	buffer.WriteString(dynamicConfig)
+
+	outStr := buffer.String()
+	hash := util.GenerateSHA512Hash(buffer.Bytes())
+	return outStr, hash, nil
 }

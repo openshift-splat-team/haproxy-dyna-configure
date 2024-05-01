@@ -18,8 +18,10 @@ type MonitorRange struct {
 
 type MonitorConfig struct {
 	MonitorRanges []MonitorRange `yaml:"monitor-ranges"`
+	HaproxyHeader string         `yaml:"haproxy-header"`
 	CheckTimeout  int            `yaml:"check-timeout"`
 	SubnetsJson   string         `yaml:"subnets-json-path"`
+	BaseDomain    string         `yaml:"base-domain"`
 }
 
 type MonitorConfigSpec struct {

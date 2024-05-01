@@ -4,7 +4,8 @@ import (
 	"context"
 	"os"
 
-	"github.com/rvanderp3/haproxy-dyna-configure/pkg"
+	"github.com/openshift-splat-team/haproxy-dyna-configure/pkg"
+	controller "github.com/openshift-splat-team/haproxy-dyna-configure/pkg/controller"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -17,14 +18,16 @@ func main() {
 		log.Errorf("unable to initialize %s", err)
 		return
 	}
-	cfg, err := pkg.CheckRanges(ctx)
-	if err != nil {
-		log.Errorf("unable to check ranges %s", err)
-		return
-	}
-	err = pkg.ApplyConfiguration(cfg)
+
+	controller.StartManager()
+	/*	cfg, err := pkg.CheckRanges(ctx)
+		if err != nil {
+			log.Errorf("unable to check ranges %s", err)
+			return
+		}*/
+	/*err = pkg.BuildDynamicConfiguration(cfg)
 	if err != nil {
 		log.Errorf("unable to apply configuration %s", err)
 		return
-	}
+	}*/
 }

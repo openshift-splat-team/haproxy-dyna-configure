@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"os"
 
+	"github.com/openshift-splat-team/haproxy-dyna-configure/data"
 	"github.com/pkg/errors"
-	"github.com/rvanderp3/haproxy-dyna-configure/data"
 	"github.com/sirupsen/logrus"
 )
 
