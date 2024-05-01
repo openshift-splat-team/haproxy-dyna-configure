@@ -41,6 +41,9 @@ func GetConfig() (*data.MonitorConfig, error) {
 		return nil, fmt.Errorf("unable to read monitor config: %v", err)
 	}
 	err = yaml.Unmarshal(configRaw, &monitorConfig)
+	if len(monitorConfig.BaseDomain) == 0 {
+		monitorConfig.BaseDomain = "vmc-ci.devcluster.openshift.com"
+	}
 	if err != nil {
 		return nil, fmt.Errorf("unable to unmarshall monitor config: %v", err)
 	}
