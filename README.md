@@ -77,32 +77,12 @@ extracted. This base domain is then used to build SNI routing in the HAProxy con
 
 ## Prereqisites
 
-- `expose-fd listeners` is configured on the HAProxy `stats` socket
-- The operator is running with a Linux user account capable of reading/writing to the socket
-- The operator must be running on the same system as HAProxy
-- monitor-config.yaml is configured with the desired ranges and ports.
-
 ## Building the Tool
 
 ~~~shell
 go mod tidy
 go mod vendor
 ./hack/build.sh
-~~~
-
-## Running the Tool
-
-Note: At this time, the operator runs as a standalone binary. 
-
-~~~shell
-./bin/haproxy-dyna-configure
-systemctl reload haproxy
-~~~
-
-## Transaction File Permissions
-
-~~~shell
-sudo chcon -R -t haproxy_tmpfs_t /tmp/haproxy
 ~~~
 
 

@@ -59,7 +59,6 @@ func createBackend(name string, port *data.MonitorPort) *haproxy.Section {
 	for _, target := range port.Targets {
 		port := port.Port
 		serverName := fmt.Sprintf("%s-%d", target, port)
-		//server := fmt.Sprintf("server %s %s:%d check verify none", serverName, target, port)
 		server := fmt.Sprintf("server %s %s:%d check verify none", serverName, target, port)
 		backend.AppendAttribute(server)
 	}

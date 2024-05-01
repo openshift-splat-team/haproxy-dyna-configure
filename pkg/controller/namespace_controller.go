@@ -85,7 +85,7 @@ func (r *NamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	err := r.Client.Get(context.TODO(), req.NamespacedName, ns)
 
 	if err != nil {
-		r.Context.Destroy(req.Namespace)
+		r.Context.Destroy(req.Name)
 		return ctrl.Result{}, nil
 	}
 
@@ -113,7 +113,7 @@ func StartManager() {
 	}
 
 	// Define the interval
-	interval := 30 * time.Second
+	interval := 2 * time.Second
 
 	// Create a new ticker
 	ticker := time.NewTicker(interval)
